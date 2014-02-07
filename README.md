@@ -51,6 +51,12 @@ different actual object that is in fact equal to the original key).
 Because these UIDs also have internal structure (including the IP address of the server that generated them and the
 time at which they were generated, among other), WebServerUid also has methods that will return this data for you.
 
+**NOTE**: You'll probably be happier if you actually term this a _browser ID_ in your application, because that's what
+it actually is (the implied "user" from `uid` notwithstanding); these cookies get set uniquely per browser, and never
+cleared (unless you manually clear them &mdash; and then the web server will just re-set them, anyway). Having a
+per-browser unique ID is an incredibly valuable thing for your analytics, and nicely orthogonal to your concept of
+user &mdash; it's just important that you keep the distinction clear in your mind.
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -69,7 +75,7 @@ Or install it yourself as:
 
 For the most common case &mdash; you can parse a WebServerUid out of one of those `request.env` lines by doing:
 
-    uid = WebServerUid.from_header(request.env['HTTP_X_NGINX_BROWSER_ID_GOT'])
+    uid = WebServerUid.from_header(request.env['HTTP_X_NGINX_BROWSER_ID_GOT'], 'brid')
 
 You can parse it from a cookie by doing:
 
@@ -79,8 +85,8 @@ Generally, you want to try all three sources; you can define a method like this,
 (but make sure the headers and cookie names are correct for your purposes):
 
     def web_server_uid
-      [ WebServerUid.from_header(request.env['HTTP_X_NGINX_BROWSER_ID_SET']),
-        WebServerUid.from_header(request.env['HTTP_X_NGINX_BROWSER_ID_GOT']),
+      [ WebServerUid.from_header(request.env['HTTP_X_NGINX_BROWSER_ID_SET'], 'brid'),
+        WebServerUid.from_header(request.env['HTTP_X_NGINX_BROWSER_ID_GOT'], 'brid'),
         WebServerUid.from_base64(cookies[:brid]) ].compact.first
     end
 
@@ -88,6 +94,9 @@ Generally, you want to try all three sources; you can define a method like this,
 return the first value that's set from the set. (While, theoretically, this will never return `nil`, you don't want to
 rely on this, based on experience; automated ping checks, misconfigured front-end servers, and so forth mean that at
 some point you'll almost certainly get a request that somehow has none of the above set.)
+
+These methods will raise `ArgumentError` if the data passed in is incorrectly-formatted; it's up to you to decide
+whether you want to allow this to propagate, or swallow it and proceed without a UID.
 
 Once you have a WebServerUid, you can call these methods on it:
 
