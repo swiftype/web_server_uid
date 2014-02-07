@@ -51,6 +51,20 @@ class WebServerUid
     def from_base64(b, options = { })
       new(b, :base64, options) if b
     end
+
+    # Given a string like "st_brid=0100007FE7D7F35241946D1E02030303", and the expected name of the ID cookie
+    # (_e.g._, +st_brid+), returns a WebServerUid if one is found, and nil otherwise. Also returns nil if input is nil.
+    # This is the exact format you get in a request.env header if you have lines like these in your nginx config:
+    #
+    #     proxy_set_header X-Nginx-Browser-ID-Got $uid_got;
+    #     proxy_set_header X-Nginx-Browser-ID-Set $uid_set;
+    #
+    # This is just a simple little method to make your parsing a bit easier.
+    def from_header(s, expected_name)
+      if s && s =~ /#{expected_name}\s*\=\s*([0-9A-F]{32})/i
+        from_hex($1)
+      end
+    end
   end
 
   # Creates a new WebServerUid object. +raw_data+ must be a String, in one of the following formats:
@@ -100,6 +114,29 @@ class WebServerUid
     if @extra_binary_data.length > (options[:max_allowed_extra_binary_data] || DEFAULT_ALLOWED_EXTRA_BINARY_DATA)
       raise ArgumentError, "This UID cookie has #{@extra_binary_data.length} bytes of extra binary data at the end: #{@raw_binary_data.inspect} adds #{@extra_binary_data.inspect}"
     end
+  end
+
+  # This, plus Comparable, implements all the equality and comparison operators we could ever need.
+  def <=>(other)
+    other_components = other.binary_components
+    binary_components.each_with_index do |our_component, index|
+      other_component = other_components[index]
+      out = our_component <=> other_component
+      return out unless out == 0
+    end
+    0
+  end
+
+  include Comparable
+
+  # ...well, except for this one. ;)
+  def eql?(other)
+    self == other
+  end
+
+  # Let's make sure we hash ourselves correctly, so we, well, work inside a Hash. :)
+  def hash
+    binary_components.hash
   end
 
   # Returns the hex-encoded variant of the UID -- exactly the string that nginx logs to disk or puts in

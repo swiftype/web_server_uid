@@ -13,6 +13,13 @@ describe WebServerUid do
       expect(WebServerUid.from_binary("\177\000\000\001R\363\327\347\036m\224A\003\003\003\002").to_hex_string).to eq("0100007FE7D7F35241946D1E02030303")
       expect(WebServerUid.from_base64("fwAAAVLz1+cebZRBAwMDAgS=").to_hex_string).to eq("0100007FE7D7F35241946D1E02030303")
     end
+
+    it "should be able to parse a value from a header" do
+      expect(WebServerUid.from_header("st_brid=0100007FE7D7F35241946D1E02030303", "st_brid").to_hex_string).to eq("0100007FE7D7F35241946D1E02030303")
+      expect(WebServerUid.from_header("baz=0100007FE7D7F35241946D1E02030303", "st_brid")).to be_nil
+      expect(WebServerUid.from_header("st_brid=0100007FE7D7F35241946D1E0203030Q", "st_brid")).to be_nil
+      expect(WebServerUid.from_header("st_brid=0100007FE7D7F35241946D1E020303", "st_brid")).to be_nil
+    end
   end
 
   describe "known examples" do
@@ -89,6 +96,43 @@ describe WebServerUid do
           expect(uid.cookie_version_number).to eq(2)
         end
       end
+    end
+  end
+
+  describe "comparison and hashing" do
+    let(:example_1) { WebServerUid.from_hex('0100007FE7D7F35241946D1E02030303') }
+    let(:example_2) { WebServerUid.from_hex('0100007FE7D7F35241946D1E02030304') }
+    let(:example_3) { WebServerUid.from_hex('0100007FE7D7F35241946D1E02030303') }
+    let(:example_4) { WebServerUid.from_hex('0100006FE7D7F35241946D1E02030303') }
+
+    it "should compare itself with <=> correctly" do
+      expect(example_1 <=> example_2).to be < 0
+      expect(example_1 <=> example_3).to eq(0)
+      expect(example_1 <=> example_4).to be > 0
+      expect(example_2 <=> example_3).to be > 0
+      expect(example_2 <=> example_4).to be > 0
+      expect(example_3 <=> example_4).to be > 0
+
+      expect(example_2 <=> example_1).to be > 0
+      expect(example_3 <=> example_1).to eq(0)
+      expect(example_4 <=> example_1).to be < 0
+      expect(example_3 <=> example_2).to be < 0
+      expect(example_4 <=> example_2).to be < 0
+      expect(example_4 <=> example_3).to be < 0
+
+      expect(example_1.eql?(example_1)).to be_true
+      expect(example_1.eql?(example_3)).to be_true
+      expect(example_3.eql?(example_1)).to be_true
+      expect(example_1.eql?(example_2)).to_not be_true
+      expect(example_2.eql?(example_1)).to_not be_true
+    end
+
+    it "should hash itself correctly" do
+      expect(example_1.hash).to eq(example_1.hash)
+      expect(example_1.hash).to eq(example_3.hash)
+      expect(example_2.hash).to eq(example_2.hash)
+      expect(example_3.hash).to eq(example_3.hash)
+      expect(example_4.hash).to eq(example_4.hash)
     end
   end
 
