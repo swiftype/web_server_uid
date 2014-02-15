@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Andrew Geweke"]
   spec.email         = ["ageweke@swiftype.com"]
   spec.summary       = %q{Parse and represent UID tokens from Apache's mod_uid / nginx's ngx_http_userid_module in Ruby.}
-  spec.homepage      = ""
+  spec.homepage      = "http://www.github.com/swiftype/web_server_uid"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files`.split($/)
