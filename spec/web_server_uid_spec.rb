@@ -36,15 +36,11 @@ describe WebServerUid do
     end
 
     it "should have the right IP" do
-      actual_ip = @generated.service_number
-      socket = Socket.ip_address_list.detect do |i|
-        next unless i.ipv4? || i.ipv6?
-        as_string = i.getnameinfo(Socket::NI_NUMERICHOST | Socket::NI_NUMERICSERV)[0]
-        as_string = $1 if as_string =~ /^(.*?)%.*$/i
-        ip = IPAddr.new(as_string)
-        ip.to_i & 0xFFFFFFFF == @generated.service_number
-      end
-      expect(socket).to be
+      require 'socket'
+      expected_ipaddr_string = UDPSocket.open {|s| s.connect('8.8.8.8', 1); s.addr.last }
+      expected_ipaddr = IPAddr.new(expected_ipaddr_string)
+
+      expect(@generated.service_number_as_ip).to eq(expected_ipaddr)
     end
 
     it "should let you override the IP" do

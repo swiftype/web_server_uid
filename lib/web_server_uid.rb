@@ -80,9 +80,16 @@ class WebServerUid
     # [:ip_address] Must be an IPAddr object to use as the IP address of this machine, in lieu of autodetection
     #               (see #find_local_ip_address, below).
     def generate(options = { })
+      # Yes, global variables. What what?
+      #
+      # Well, in certain cases (like under Rails), this class may get unloaded and reloaded. (Yes, it's in a gem, so
+      # theoretically this shouldn't happen, but we want to be really, really careful.) Because we need to be really
+      # sure to maintain uniqueness, we use global variables, which, unlike class variables, won't get reset if this
+      # class gets loaded or unloaded
       $_web_server_uid_start_value ||= ((Time.now.usec / 20) << 16) | (Process.pid & 0xFFFF)
       $_web_server_uid_sequencer ||= 0x030302
       $_web_server_uid_sequencer += 1
+      $_web_server_uid_sequencer &= 0xFFFFFF
 
       extra = options.keys - [ :ip_address ]
       if extra.length > 0
@@ -99,7 +106,7 @@ class WebServerUid
         ip_address.to_i & 0xFFFFFFFF,
         Time.now.to_i,
         $_web_server_uid_start_value,
-        (($_web_server_uid_sequencer & 0xFFFFFF) << 8) | 0x2
+        ($_web_server_uid_sequencer << 8) | 0x2
       ]
 
       binary = components.pack("NNNN")
@@ -107,32 +114,21 @@ class WebServerUid
     end
 
     private
-    # Returns an IPAddr of the local machine. We try the following, in order:
+    # Finds the local IP address. This looks like evil voodoo, but it isn't -- no actual network traffic or connection
+    # is made. 8.8.8.8 is, famously, one of Google's DNS servers; this tells Ruby to open a UDP socket bound to it --
+    # but, unlike TCP, opening a UDP socket doesn't actually do anything until you send something on it. The clever bit
+    # is that this will magically find whatever interface your machine would send traffic to Google on, which almost
+    # everybody is going to have (even if it's firewalled off somewhere out there on the network), and return the IP
+    # address of that.
     #
-    # * The first public (non-private, non-loopback, non-multicast) IPv4 address we can find;
-    # * The first public (non-linklocal, non-loopback, non-multicast, non-sitelocal, non-IPv4-mapped) IPv6 address we can find;
-    # * The first private (non-loopback, non-multicast) IPv4 address we can find;
-    # * The first private (non-linklocal, non-loopback, non-multicast, non-IPv4-mapped) IPv6 address we can find.
+    # Note that this could be an IPv6 address. This works properly; we grab the four LSB, above.
     #
-    # Raises an exception if we can't find an IP address at all.
+    # (Much credit to http://coderrr.wordpress.com/2008/05/28/get-your-local-ip-address/.)
     def find_local_ip_address
       @local_ip_address ||= begin
-        ipv4_candidates = Socket.ip_address_list.select { |i| i.ipv4? && (! i.ipv4_loopback?) && (! i.ipv4_multicast?) }
-        ipv4_public = ipv4_candidates.select { |i| (! i.ipv4_private?) }
-
-        ipv6_candidates = Socket.ip_address_list.select do |i|
-          i.ipv6? && (! i.ipv6_linklocal?) && (! i.ipv6_loopback?) && (! i.ipv6_mc_global?) && (! i.ipv6_mc_linklocal?) &&
-          (! i.ipv6_mc_nodelocal?) && (! i.ipv6_mc_orglocal?) && (! i.ipv6_mc_sitelocal?) && (! i.ipv6_multicast?) &&
-          (! i.ipv6_v4compat?) && (! i.ipv6_v4mapped?)
-        end
-        ipv6_public = ipv6_candidates.select { |i| (! i.ipv6_sitelocal?) }
-
-        used_ip = ipv4_public.first || ipv6_public.first || ipv4_candidates.first || ipv6_candidates.first
-        unless used_ip
-          raise "WebServerUid cannot find an IP address for this machine to use to generate a new UID; all addresses are loopback/link-local/multicast/etc. Please supply an IP address with :ip_address."
-        end
-
-        IPAddr.new(used_ip.getnameinfo(Socket::NI_NUMERICHOST | Socket::NI_NUMERICSERV)[0])
+        require 'socket'
+        ipaddr_string = UDPSocket.open {|s| s.connect('8.8.8.8', 1); s.addr.last }
+        IPAddr.new(ipaddr_string)
       end
     end
   end
