@@ -57,6 +57,15 @@ cleared (unless you manually clear them &mdash; and then the web server will jus
 per-browser unique ID is an incredibly valuable thing for your analytics, and nicely orthogonal to your concept of
 user &mdash; it's just important that you keep the distinction clear in your mind.
 
+WebServerUid supports:
+
+* Ruby 1.8.7, 1.9.3, 2.0.0, 2.1.0, or JRuby 1.7.9
+
+These are, however, just the versions it's tested against; WebServerUid contains no code that should be at all
+particularly dependent on exact Ruby versions, and should be compatible with a broad set of versions.
+
+Current build status: ![Current Build Status](https://api.travis-ci.org/swiftype/web_server_uid.png?branch=master)
+
 ## Installation
 
 Add this line to your application's Gemfile:
