@@ -22,6 +22,64 @@ describe WebServerUid do
     end
   end
 
+  describe "generating a brand-new instance" do
+    before :each do
+      @generated = WebServerUid.generate
+    end
+
+    it "should be able to create a new instance" do
+      expect(@generated).to be_instance_of(WebServerUid)
+    end
+
+    it "should have the right time" do
+      expect((Time.now.to_i - @generated.issue_time.to_i).abs).to be < 300
+    end
+
+    it "should have the right IP" do
+      actual_ip = @generated.service_number
+      socket = Socket.ip_address_list.detect do |i|
+        next unless i.ipv4? || i.ipv6?
+        as_string = i.getnameinfo(Socket::NI_NUMERICHOST | Socket::NI_NUMERICSERV)[0]
+        as_string = $1 if as_string =~ /^(.*?)%.*$/i
+        ip = IPAddr.new(as_string)
+        ip.to_i & 0xFFFFFFFF == @generated.service_number
+      end
+      expect(socket).to be
+    end
+
+    it "should let you override the IP" do
+      @generated = WebServerUid.generate(:ip_address => "127.0.0.1")
+      expect(@generated.to_hex_string).to match(/^0100007F/)
+    end
+
+    it "should fail if passed unknown options" do
+      expect { WebServerUid.generate(:foo => :bar) }.to raise_error(ArgumentError)
+    end
+
+    it "should fail if passed something that isn't an IP address" do
+      expect { WebServerUid.generate(:ip_address => /foobar/) }.to raise_error(ArgumentError)
+    end
+
+    it "should have the right PID" do
+      expect(@generated.pid).to eq(Process.pid)
+    end
+
+    it "should have the right sequencer" do
+      expect(@generated.sequencer).to be >= 0x030303
+      expect(@generated.sequencer).to be <= (0x030303 + 50)
+    end
+
+    it "should have the right version" do
+      expect(@generated.cookie_version_number).to eq(2)
+    end
+
+    it "should never generate the same ID twice" do
+      ids = [ ]
+      1000.times { ids << WebServerUid.generate }
+      expect(ids.map(&:to_hex_string).uniq.length).to eq(1000)
+    end
+  end
+
   describe "known examples" do
     { :hex => '0100007FE7D7F35241946D1E02030303', :base64 => 'fwAAAVLz1+cebZRBAwMDAgS=',
       :binary => "\177\000\000\001R\363\327\347\036m\224A\003\003\003\002" }.each do |type, raw|
@@ -38,7 +96,12 @@ describe WebServerUid do
         end
 
         it "should have the right binary string" do
-          expect(uid.to_binary_string).to eq("\177\000\000\001R\363\327\347\036m\224A\003\003\003\002")
+          actual = uid.to_binary_string
+          actual.force_encoding(Encoding::BINARY) if actual.respond_to?(:force_encoding)
+          expected = "\177\000\000\001R\363\327\347\036m\224A\003\003\003\002"
+          expected.force_encoding(Encoding::BINARY) if expected.respond_to?(:force_encoding)
+
+          expect(actual).to eq(expected)
           if uid.to_binary_string.respond_to?(:encoding)
             expect(uid.to_binary_string.encoding).to eq(Encoding::BINARY)
           end

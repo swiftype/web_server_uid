@@ -65,6 +65,76 @@ class WebServerUid
         from_hex($1)
       end
     end
+
+    # Generates a brand-new instance, from scratch. This follows exactly the algorithm in nginx-1.5.10:
+    #
+    # * The first four bytes are the local IP address (entire if IPv4, four LSB if IPv6);
+    # * The next four bytes are the current time, as a Unix epoch time;
+    # * The next two bytes are a function of the start time of the process, but LSBs in microseconds;
+    # * The next two bytes are the PID of the process;
+    # * The next three bytes are a sequence value, starting at 0x030303;
+    # * The last byte is 2, for version 2.
+    #
+    # +options+ can contain:
+    #
+    # [:ip_address] Must be an IPAddr object to use as the IP address of this machine, in lieu of autodetection
+    #               (see #find_local_ip_address, below).
+    def generate(options = { })
+      $_web_server_uid_start_value ||= ((Time.now.usec / 20) << 16) | (Process.pid & 0xFFFF)
+      $_web_server_uid_sequencer ||= 0x030302
+      $_web_server_uid_sequencer += 1
+
+      extra = options.keys - [ :ip_address ]
+      if extra.length > 0
+        raise ArgumentError, "Unknown keys: #{extra.inspect}"
+      end
+
+      ip_address = if options[:ip_address]
+        IPAddr.new(options[:ip_address])
+      else
+        find_local_ip_address
+      end
+
+      components = [
+        ip_address.to_i & 0xFFFFFFFF,
+        Time.now.to_i,
+        $_web_server_uid_start_value,
+        (($_web_server_uid_sequencer & 0xFFFFFF) << 8) | 0x2
+      ]
+
+      binary = components.pack("NNNN")
+      from_binary(binary)
+    end
+
+    private
+    # Returns an IPAddr of the local machine. We try the following, in order:
+    #
+    # * The first public (non-private, non-loopback, non-multicast) IPv4 address we can find;
+    # * The first public (non-linklocal, non-loopback, non-multicast, non-sitelocal, non-IPv4-mapped) IPv6 address we can find;
+    # * The first private (non-loopback, non-multicast) IPv4 address we can find;
+    # * The first private (non-linklocal, non-loopback, non-multicast, non-IPv4-mapped) IPv6 address we can find.
+    #
+    # Raises an exception if we can't find an IP address at all.
+    def find_local_ip_address
+      @local_ip_address ||= begin
+        ipv4_candidates = Socket.ip_address_list.select { |i| i.ipv4? && (! i.ipv4_loopback?) && (! i.ipv4_multicast?) }
+        ipv4_public = ipv4_candidates.select { |i| (! i.ipv4_private?) }
+
+        ipv6_candidates = Socket.ip_address_list.select do |i|
+          i.ipv6? && (! i.ipv6_linklocal?) && (! i.ipv6_loopback?) && (! i.ipv6_mc_global?) && (! i.ipv6_mc_linklocal?) &&
+          (! i.ipv6_mc_nodelocal?) && (! i.ipv6_mc_orglocal?) && (! i.ipv6_mc_sitelocal?) && (! i.ipv6_multicast?) &&
+          (! i.ipv6_v4compat?) && (! i.ipv6_v4mapped?)
+        end
+        ipv6_public = ipv6_candidates.select { |i| (! i.ipv6_sitelocal?) }
+
+        used_ip = ipv4_public.first || ipv6_public.first || ipv4_candidates.first || ipv6_candidates.first
+        unless used_ip
+          raise "WebServerUid cannot find an IP address for this machine to use to generate a new UID; all addresses are loopback/link-local/multicast/etc. Please supply an IP address with :ip_address."
+        end
+
+        IPAddr.new(used_ip.getnameinfo(Socket::NI_NUMERICHOST | Socket::NI_NUMERICSERV)[0])
+      end
+    end
   end
 
   # Creates a new WebServerUid object. +raw_data+ must be a String, in one of the following formats:
