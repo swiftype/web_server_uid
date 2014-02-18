@@ -110,7 +110,7 @@ class WebServerUid
       ]
 
       binary = components.pack("NNNN")
-      from_binary(binary)
+      new(binary, :generated)
     end
 
     private
@@ -144,6 +144,7 @@ class WebServerUid
   #
   # ...and +type+ must be the corresponding format -- one of :binary, :hex, or :base64. (It is not possible to guess
   # the format 100% reliably from the inbound +raw_data+, since raw binary can happen to look like one of the others.)
+  # (+type+ can also be +:generated+, for exclusive use of +.generate+, above.)
   #
   # +options+ can contain:
   #
@@ -153,7 +154,7 @@ class WebServerUid
   #                                  get exactly that character in the Base64 at the end, and this will translate to
   #                                  extra data.
   def initialize(raw_data, type, options = { })
-    raise ArgumentError, "Type must be one of :binary, :hex, or :base64, not #{type.inspect}" unless [ :binary, :hex, :base64 ].include?(type)
+    raise ArgumentError, "Type must be one of :binary, :hex, or :base64, not #{type.inspect}" unless [ :binary, :hex, :base64, :generated ].include?(type)
     @input_type = type
 
     @binary_components = case type
@@ -163,7 +164,7 @@ class WebServerUid
     when :base64 then
       @raw_binary_data = Base64.decode64(raw_data)
       @raw_binary_data.unpack("NNNN")
-    when :binary then
+    when :binary, :generated then
       @raw_binary_data = raw_data
       @raw_binary_data.unpack("NNNN")
     else
@@ -191,6 +192,14 @@ class WebServerUid
       return out unless out == 0
     end
     0
+  end
+
+  def to_s
+    "<#{self.class.name} from #{@input_type}: #{to_hex_string}>"
+  end
+
+  def inspect
+    to_s
   end
 
   include Comparable

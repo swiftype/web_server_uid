@@ -74,6 +74,16 @@ describe WebServerUid do
       1000.times { ids << WebServerUid.generate }
       expect(ids.map(&:to_hex_string).uniq.length).to eq(1000)
     end
+
+    it "should turn itself into a string reasonably, and say where it's from" do
+      expect(@generated.to_s).to match(/generated/i)
+      expect(@generated.to_s).to match(/#{@generated.to_hex_string}/i)
+    end
+
+    it "should inspect itself reasonably, and say where it's from" do
+      expect(@generated.inspect).to match(/generated/i)
+      expect(@generated.inspect).to match(/#{@generated.to_hex_string}/i)
+    end
   end
 
   describe "known examples" do
@@ -153,6 +163,16 @@ describe WebServerUid do
 
         it "should have the right cookie version number" do
           expect(uid.cookie_version_number).to eq(2)
+        end
+
+        it "should turn itself into a string reasonably, and say where it's from" do
+          expect(uid.to_s).to match(/#{uid.to_hex_string}/i)
+          expect(uid.to_s).to match(/#{type}/i)
+        end
+
+        it "should inspect itself reasonably, and say where it's from" do
+          expect(uid.inspect).to match(/#{uid.to_hex_string}/i)
+          expect(uid.inspect).to match(/#{type}/i)
         end
       end
     end
