@@ -66,6 +66,8 @@ particularly dependent on exact Ruby versions, and should be compatible with a b
 
 Current build status: ![Current Build Status](https://api.travis-ci.org/swiftype/web_server_uid.png?branch=master)
 
+Brought to you by the folks at [Swiftype](https://www.swiftype.com). First version written by [Andrew Geweke](https://www.github.com/ageweke).
+
 ## Installation
 
 Add this line to your application's Gemfile:
