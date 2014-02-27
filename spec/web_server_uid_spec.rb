@@ -22,6 +22,12 @@ describe WebServerUid do
     end
   end
 
+  it "should fall back to 127.0.0.1 if the network is unreachable (like if you're offline)" do
+    expect(UDPSocket).to receive(:open).with().and_raise(Errno::ENETUNREACH)
+    generated = WebServerUid.generate
+    expect(generated.service_number_as_ip).to eq(IPAddr.new("127.0.0.1"))
+  end
+
   describe "generating a brand-new instance" do
     before :each do
       @generated = WebServerUid.generate
@@ -36,9 +42,13 @@ describe WebServerUid do
     end
 
     it "should have the right IP" do
-      require 'socket'
-      expected_ipaddr_string = UDPSocket.open {|s| s.connect('8.8.8.8', 1); s.addr.last }
-      expected_ipaddr = IPAddr.new(expected_ipaddr_string)
+      begin
+        require 'socket'
+        expected_ipaddr_string = UDPSocket.open {|s| s.connect('8.8.8.8', 1); s.addr.last }
+        expected_ipaddr = IPAddr.new(expected_ipaddr_string)
+      rescue Errno::ENETUNREACH => unreachable
+        expected_ipaddr = IPAddr.new("127.0.0.1")
+      end
 
       expect(@generated.service_number_as_ip).to eq(expected_ipaddr)
     end

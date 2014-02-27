@@ -123,12 +123,17 @@ class WebServerUid
     #
     # Note that this could be an IPv6 address. This works properly; we grab the four LSB, above.
     #
+    # We fall back to 127.0.0.1 if we get Errno::ENETUNREACH -- for example, if the network is offline. (Guess where
+    # I'm writing this comment from?)
+    #
     # (Much credit to http://coderrr.wordpress.com/2008/05/28/get-your-local-ip-address/.)
     def find_local_ip_address
       @local_ip_address ||= begin
         require 'socket'
         ipaddr_string = UDPSocket.open {|s| s.connect('8.8.8.8', 1); s.addr.last }
         IPAddr.new(ipaddr_string)
+      rescue Errno::ENETUNREACH => unreachable
+        IPAddr.new("127.0.0.1")
       end
     end
   end
