@@ -23,7 +23,7 @@ describe WebServerUid do
   end
 
   it "should fall back to 127.0.0.1 if the network is unreachable (like if you're offline)" do
-    pending "We can't successfully test this right now; the expectation below works, but then persists into other examples, breaking them :("
+    skip "We can't successfully test this right now; the expectation below works, but then persists into other examples, breaking them :("
     expect(UDPSocket).to receive(:open).with().and_raise(Errno::ENETUNREACH)
     generated = WebServerUid.generate
     expect(generated.service_number_as_ip).to eq(IPAddr.new("127.0.0.1"))
@@ -210,11 +210,11 @@ describe WebServerUid do
       expect(example_4 <=> example_2).to be < 0
       expect(example_4 <=> example_3).to be < 0
 
-      expect(example_1.eql?(example_1)).to be_true
-      expect(example_1.eql?(example_3)).to be_true
-      expect(example_3.eql?(example_1)).to be_true
-      expect(example_1.eql?(example_2)).to_not be_true
-      expect(example_2.eql?(example_1)).to_not be_true
+      expect(example_1.eql?(example_1)).to be(true)
+      expect(example_1.eql?(example_3)).to be(true)
+      expect(example_3.eql?(example_1)).to be(true)
+      expect(example_1.eql?(example_2)).to be(false)
+      expect(example_2.eql?(example_1)).to be(false)
     end
 
     it "should hash itself correctly" do
