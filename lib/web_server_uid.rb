@@ -190,6 +190,8 @@ class WebServerUid
 
   # This, plus Comparable, implements all the equality and comparison operators we could ever need.
   def <=>(other)
+    return nil unless other.kind_of?(WebServerUid)
+
     other_components = other.binary_components
     binary_components.each_with_index do |our_component, index|
       other_component = other_components[index]

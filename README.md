@@ -59,7 +59,7 @@ user &mdash; it's just important that you keep the distinction clear in your min
 
 WebServerUid supports:
 
-* Ruby 1.8.7, 1.9.3, 2.0.0, 2.1.0, or JRuby 1.7.9
+* Ruby 1.8.7, 1.9.3, 2.0.0, 2.1.0, 2.2.2, or JRuby 1.7.9
 
 These are, however, just the versions it's tested against; WebServerUid contains no code that should be at all
 particularly dependent on exact Ruby versions, and should be compatible with a broad set of versions.

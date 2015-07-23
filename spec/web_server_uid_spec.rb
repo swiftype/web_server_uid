@@ -212,11 +212,18 @@ describe WebServerUid do
       expect(example_4 <=> example_2).to be < 0
       expect(example_4 <=> example_3).to be < 0
 
+      expect(example_1 <=> :foo).to be(nil)
+
       expect(example_1.eql?(example_1)).to be(true)
       expect(example_1.eql?(example_3)).to be(true)
       expect(example_3.eql?(example_1)).to be(true)
       expect(example_1.eql?(example_2)).to be(false)
       expect(example_2.eql?(example_1)).to be(false)
+      expect(example_1.eql?(:foo)).to be_falsey
+      expect(:foo.eql?(example_1)).to be_falsey
+
+      expect(example_1 == :foo).to be_falsey
+      expect(:foo == example_1).to be_falsey
     end
 
     it "should hash itself correctly" do
