@@ -282,7 +282,8 @@ class WebServerUid
     @binary_components[2]
   end
 
-  # As explained above, this is just the PID itself from the third comppnent.
+  # As explained above, this is just the PID itself from the third component.
+  # NOTE: if your system produces PIDs greater than 65535 the pid will have been truncated to fit in two bytes.
   def pid
     pid_component & 0xFFFF
   end

@@ -67,6 +67,8 @@ describe WebServerUid do
       expect { WebServerUid.generate(:ip_address => /foobar/) }.to raise_error(ArgumentError)
     end
 
+    # NOTE: this test will only pass on machines that do not have PIDs larger than 65535
+    # OSX 10.10.4 appears to use PIDs up to 99999
     it "should have the right PID" do
       expect(@generated.pid).to eq(Process.pid)
     end
