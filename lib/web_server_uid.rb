@@ -190,6 +190,8 @@ class WebServerUid
 
   # This, plus Comparable, implements all the equality and comparison operators we could ever need.
   def <=>(other)
+    return nil unless other.kind_of?(WebServerUid)
+
     other_components = other.binary_components
     binary_components.each_with_index do |our_component, index|
       other_component = other_components[index]
@@ -282,7 +284,8 @@ class WebServerUid
     @binary_components[2]
   end
 
-  # As explained above, this is just the PID itself from the third comppnent.
+  # As explained above, this is just the PID itself from the third component.
+  # NOTE: if your system produces PIDs greater than 65535 the pid will have been truncated to fit in two bytes.
   def pid
     pid_component & 0xFFFF
   end
